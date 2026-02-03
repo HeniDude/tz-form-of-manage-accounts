@@ -1,0 +1,14 @@
+import { createApp } from 'vue'
+import App from './App.vue'
+
+import { createPinia } from 'pinia'
+
+import 'element-plus/dist/index.css'
+
+const app = createApp(App)
+
+const pinia = createPinia()
+
+app.use(pinia)
+
+app.mount('#app')
