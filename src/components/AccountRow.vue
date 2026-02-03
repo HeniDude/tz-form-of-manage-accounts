@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { reactive, watch } from 'vue'
+import { watch } from 'vue'
+import { toTypedSchema } from '@vee-validate/yup'
+import { useField, useForm } from 'vee-validate'
+import * as yup from 'yup'
 
 import type { IAccount } from '../types/account'
 import { formatLabels, parseLabels } from '../utils/labels'
@@ -13,87 +16,114 @@ const emit = defineEmits<{
   remove: []
 }>()
 
-type Field = 'labels' | 'type' | 'login' | 'password'
-
-const draft = reactive({
-  labelsText: '',
-  type: 'local' as IAccount['type'],
-  login: '',
-  passwordText: '',
+const schema = yup.object({
+  labelsText: yup.string().max(50).default(''),
+  type: yup.mixed<IAccount['type']>().oneOf(['local', 'ldap']).required('Обязательное поле'),
+  login: yup.string().max(100),
+  passwordText: yup
+    .string()
+    .max(100)
+    .when('type', {
+      is: 'local',
+      then: (s: yup.StringSchema<string | undefined>) =>
+        s.test('required', 'Обязательное поле', (value: unknown) =>
+          typeof value === 'string' ? value.trim().length > 0 : false,
+        ),
+      otherwise: (s: yup.StringSchema<string | undefined>) => s.notRequired(),
+    })
+    .default(''),
 })
 
-const errors = reactive<Record<Field, boolean>>({
-  labels: false,
-  type: false,
-  login: false,
-  password: false,
+const { validate, resetForm, setFieldValue, validateField } = useForm({
+  validationSchema: toTypedSchema(schema),
+  initialValues: {
+    labelsText: '',
+    type: 'local',
+    login: '',
+    passwordText: '',
+  },
 })
+
+const { value: labelsText } = useField<string>('labelsText', undefined, {
+  validateOnValueUpdate: false,
+})
+const { value: type, errorMessage: typeError } = useField<IAccount['type']>('type', undefined, {
+  validateOnValueUpdate: false,
+})
+const { value: login, errorMessage: loginError } = useField<string>('login', undefined, {
+  validateOnValueUpdate: false,
+})
+const { value: passwordText, errorMessage: passwordError } = useField<string>(
+  'passwordText',
+  undefined,
+  {
+    validateOnValueUpdate: false,
+  },
+)
 
 watch(
   () => props.modelValue,
   (value) => {
-    draft.labelsText = formatLabels(value.labels)
-    draft.type = value.type
-    draft.login = value.login
-    draft.passwordText = value.password ?? ''
-
-    errors.labels = false
-    errors.type = false
-    errors.login = false
-    errors.password = false
+    resetForm({
+      values: {
+        labelsText: formatLabels(value.labels),
+        type: value.type,
+        login: value.login,
+        passwordText: value.password ?? '',
+      },
+    })
   },
   { immediate: true },
 )
 
-function validateRequired(): boolean {
-  errors.type = !draft.type
-  errors.login = draft.login.trim().length === 0
-  errors.password = draft.type === 'local' && draft.passwordText.trim().length === 0
+async function normalizeAndCommit(): Promise<void> {
+  const result = await validate()
+  if (!result.valid) return
 
-  return !errors.type && !errors.login && !errors.password
-}
-
-function normalizeAndCommit(): void {
-  if (!validateRequired()) return
-
-  const normalizedLabels = parseLabels(draft.labelsText)
-  draft.labelsText = formatLabels(normalizedLabels)
+  const normalizedLabels = parseLabels(labelsText.value)
+  setFieldValue('labelsText', formatLabels(normalizedLabels), false)
 
   emit('update', {
     ...props.modelValue,
     labels: normalizedLabels,
-    type: draft.type,
-    login: draft.login.trim(),
-    password: draft.type === 'local' ? draft.passwordText : null,
+    type: type.value,
+    login: login.value.trim(),
+    password: type.value === 'local' ? passwordText.value : null,
   })
 }
 
 function onLabelsBlur(): void {
-  normalizeAndCommit()
+  void normalizeAndCommit()
 }
 
-function onTypeChange(type: IAccount['type']): void {
-  draft.type = type
-  if (type === 'ldap') draft.passwordText = ''
-  normalizeAndCommit()
+async function onTypeChange(nextType: IAccount['type']): Promise<void> {
+  setFieldValue('type', nextType, false)
+
+  if (nextType === 'ldap') {
+    setFieldValue('passwordText', '', false)
+  } else {
+    await validateField('passwordText')
+  }
+
+  await normalizeAndCommit()
 }
 
 function onLoginBlur(): void {
-  normalizeAndCommit()
+  void normalizeAndCommit()
 }
 
 function onPasswordBlur(): void {
-  normalizeAndCommit()
+  void normalizeAndCommit()
 }
 </script>
 
 <template>
   <div class="accounts-table__row">
-    <el-input v-model="draft.labelsText" maxlength="50" @blur="onLabelsBlur" />
+    <el-input v-model="labelsText" maxlength="50" @blur="onLabelsBlur" />
 
     <el-select
-      :class="{ 'is-invalid': errors.type }"
-      :model-value="draft.type"
+      :class="{ 'is-invalid': !!typeError }"
+      :model-value="type"
       @update:model-value="onTypeChange"
     >
       <el-option label="Локальная" value="local" />
@@ -101,16 +131,16 @@ function onPasswordBlur(): void {
     </el-select>
 
     <el-input
-      v-model="draft.login"
-      :class="{ 'is-invalid': errors.login }"
+      v-model="login"
+      :class="{ 'is-invalid': !!loginError }"
       maxlength="100"
       @blur="onLoginBlur"
     />
 
     <el-input
-      v-if="draft.type === 'local'"
-      v-model="draft.passwordText"
-      :class="{ 'is-invalid': errors.password }"
+      v-if="type === 'local'"
+      v-model="passwordText"
+      :class="{ 'is-invalid': !!passwordError }"
       type="password"
       maxlength="100"
       @blur="onPasswordBlur"
