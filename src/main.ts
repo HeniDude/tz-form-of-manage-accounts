@@ -1,14 +1,14 @@
 import { createApp } from 'vue'
+import { createPinia } from 'pinia'
 import App from './App.vue'
 
-import { createPinia } from 'pinia'
+import { piniaLocalStoragePersistPlugin } from './plugins/piniaLocalStoragePersist'
 
 import 'element-plus/dist/index.css'
 
-const app = createApp(App)
-
 const pinia = createPinia()
+pinia.use(piniaLocalStoragePersistPlugin)
 
+const app = createApp(App)
 app.use(pinia)
-
 app.mount('#app')

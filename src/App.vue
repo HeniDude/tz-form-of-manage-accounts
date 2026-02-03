@@ -1,14 +1,7 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import AccountsPage from './components/AccountsPage.vue'
+</script>
 
 <template>
-  <div class="container"></div>
+  <AccountsPage />
 </template>
-
-<style scoped>
-.container {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  padding: 2rem;
-}
-</style>

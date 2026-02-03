@@ -6,12 +6,15 @@ import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 
 export default defineConfig({
-  plugins: [vue(), AutoImport({
+  plugins: [
+    vue(),
+    AutoImport({
       resolvers: [ElementPlusResolver()],
       dts: 'src/auto-imports.d.ts',
-  }),
-  Components({
+    }),
+    Components({
       resolvers: [ElementPlusResolver()],
-      dts: 'src/components.d.ts'
-  })],
+      dts: 'src/components.d.ts',
+    }),
+  ],
 })

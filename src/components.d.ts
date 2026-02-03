@@ -11,11 +11,14 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AccountRow: typeof import('./components/AccountRow.vue')['default']
+    AccountsHeader: typeof import('./components/AccountsHeader.vue')['default']
+    AccountsHint: typeof import('./components/AccountsHint.vue')['default']
+    AccountsPage: typeof import('./components/AccountsPage.vue')['default']
+    AccountsTable: typeof import('./components/AccountsTable.vue')['default']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElInput: typeof import('element-plus/es')['ElInput']
     ElOption: typeof import('element-plus/es')['ElOption']
     ElSelect: typeof import('element-plus/es')['ElSelect']
-    Header: typeof import('./components/Header.vue')['default']
-    Table: typeof import('./components/Table.vue')['default']
   }
 }
